@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  mysql:
+    container_name: rinnai-mysql
+    build: /home/ec2-user/work/dockerfile
+    volumes:
+      - ./docker/mysql/initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/mysql/my.cnf:/etc/my.cnf
+      - ./data/mysql:/var/lib/mysql
+    env_file: ./.env
+    ports:
+      - 3306:${DB_PORT}
+    environment:
+      - MYSQL_USER=${DB_USER}
+      - TZ: ${TZ}
+    environment:
+      - TZ=${TZ}
+    restart: always

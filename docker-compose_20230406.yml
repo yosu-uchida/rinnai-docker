@@ -1,0 +1,74 @@
+version: "3.8"
+services:
+  mysql:
+    container_name: rinnai-mysql
+    build:
+     context: .
+     dockerfile: Dockerfile_mysql
+    volumes:
+      - ./docker/mysql/initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/mysql/my.cnf:/etc/my.cnf
+      - ./data/mysql:/var/lib/mysql
+    env_file: ./.env
+    ports:
+      - 3306:${DB_PORT}
+    environment:
+      - MYSQL_USER=${DB_USER}
+      - TZ: ${TZ}
+    environment:
+      - TZ=${TZ}
+    restart: always
+
+  httpd:
+    container_name: rinnai-httpd
+    build:
+     context: .
+     dockerfile: Dockerfile_mysql
+    volumes:
+      - ./docker/httpd/rinnai.conf:/etc/httpd/conf/httpd.conf
+      - ./data/apps/public:/var/www/html
+    ports:
+      - "80:80"
+    env_file: ./.env
+    environment:
+      - TZ=${TZ}
+    restart: always
+
+  php:
+    container_name: rinnai-php
+    build:
+     context: .
+     dockerfile: Dockerfile_php
+    volumes:
+      - ./docker/php/rinnai.conf:/home/homepage/stg_rinnai/app/httpdconf/stg.rinnai.conf
+      - ./data/apps:/var/www/html
+      - ./logs/php-fpm:/var/log/php-fpm
+    ports:
+      - "9000:9000"
+    env_file: ./.env
+    restart: always
+    depends_on:
+      - db
+      - httpd
+
+  perl:
+    container_name: rinnai-perl
+    build:
+     context: .
+     dockerfile: Dockerfile_perl
+    volumes:
+      - ./data:/var/www/html
+      - ./apps:/var/www/apps
+      - /usr/lib/perl5/5.16.3/CPAN/Config.pm:/usr/lib/perl5/5.16.3/CPAN/Config.pm
+      - /app/src/scripts/update_sitemap.pl:/app/src/scripts/update_sitemap.pl
+      - /app/src/lib/RmktFileManager.pm:/app/src/lib/RmktFileManager.pm
+    ports:
+      - "5000:5000"
+    env_file: ./.env
+    depends_on:
+      - httpd
+      - db
+    environment:
+      - TZ=${TZ}
+      - cpus=0.50
+      - mem_limit=768m
